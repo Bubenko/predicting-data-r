@@ -1,6 +1,6 @@
 # Predicting Data using R
 
-<img src="https://s6.gifyu.com/images/R-data.gif" />
+<img src="https://s6.gifyu.com/images/r-Final.gif" />
 
 
 **Techlologys and methodologies used in this project**
