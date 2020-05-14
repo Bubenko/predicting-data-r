@@ -1,0 +1,194 @@
+---
+title: "Volodymyr Bubenko - Final Project"
+author: "Volodymyr Bubenko"
+date: "4/28/2020"
+output: html_document
+---
+
+1.Data Preparation
+```{r}
+#1.1.Load the dataset insurance.csv into memory.
+data <- read.csv("insurance.csv")
+head(data)
+```
+
+```{r}
+#1.2.In the data frame, transform the variable charges by setting insurance$charges = log(insurance$charges).
+data$charges = log(data$charges)
+```
+
+```{r}
+#1.3.Using the data set from 1.2, use the model.matrix() function to create another data set that uses dummy variables in place of categorical variables. Verify that the first column only has ones (1) as values, and then discard the column only after verifying it has only ones as values.
+
+
+data.dummy <- data.frame(data[,! colnames(data) %in% "sex smoker region"],
+  model.matrix(~ sex + smoker + region , data)) #dummy variables in place of categorical variables
+
+#data.dummy$sex <- NULL
+#data.dummy$smoker <- NULL
+#data.dummy$region <- NULL
+
+data.dummy$X.Intercept. <- NULL #Verify that the first column only has ones (1) as values, and then discard the column only after verifying it has only ones as values.
+```
+
+```{r}
+#1.4.Use the sample() function with set.seed equal to 1 to generate row indexes for your training and tests sets, with 2/3 of the row indexes for your training set and 1/3 for your test set. Do not use any method other than the sample() function for splitting your data.
+
+set.seed(1) #set.seed equal to 1
+
+size <- floor(0.66 * nrow(data.dummy)) #2/3 of the row indexes
+
+index <- sample(seq_len(nrow(data.dummy)), size = size) #sample() function for splitting your data.
+
+dummy.train <- data.dummy[index, ]
+dummy.test <- data.dummy[-index, ]
+
+```
+
+```{r}
+#1.5. Create a training and test data set from the data set created in 1.2 using the training and test row indexes created in 1.4. Unless otherwise stated, only use the training and test data sets created in this step.
+
+set.seed(1) #set.seed equal to 1
+
+size <- floor(0.66 * nrow(data)) #2/3 of the row indexes
+
+index <- sample(seq_len(nrow(data)), size = size) #sample() function for splitting your data.
+
+data.train <- data[index, ] #training data set from the data set created in 1.2
+data.test <- data[-index, ] #test data set from the data set created in 1.2
+```
+
+```{r}
+#1.6. Create a training and test data set from data set created in 1.3 using the training and test row indexes created in 1.4
+```
+
+2. Build a multiple linear regression model.
+```{r}
+#2.1. Perform multiple linear regression with charges as the response and the predictors are age, sex, bmi, children, smoker, and region. Print out the results using the summary() function. Use the training data set created in step 1.5 to train your model.
+
+fit <- lm(charges ~ ., data=data.train)
+summary(fit) # show results
+```
+
+```{r}
+#2.2.Is there a relationship between the predictors and the response?
+# As we can see by the p-value the relationship between the response variable and predictors are strong. Some variable has stronger relationship (age, bmi, children, smokeryes, regionsoutheast). 
+```
+
+```{r}
+#2.3. Does sex have a statistically significant relationship to the response?
+
+# As we can see by the p-value the sex has NO STRONG relationship with the responce variable 
+```
+
+```{r}
+#2.4. Perform best subset selection using the stepAIC() function from the MASS library, choose best model based on AIC. For the "direction" parameter in the stepAIC() method, set direciton="backward"
+require(MASS)
+library(MASS)
+
+full <-  glm(charges ~ ., data = data.train)
+null <- lm(charges ~ 1, data = data.train)
+
+data.aic <- stepAIC(full, direction = "backward",
+                   scope = list(lower = null, upper = full))
+# as a result it is not neccecersly to exclude any variables form the data
+data.aic
+```
+
+```{r}
+#2.5. Compute the test error of the best model in #2.4 based on AIC using LOOCV using trainControl() and train() from the caret library. Report the MSE by squaring the reported RMSE.
+
+# load the library
+library(caret)
+
+train_control <- trainControl(method="LOOCV")
+model <- train(charges ~ age + sex + bmi + children + smoker + region, data=data.train, trControl=train_control, method="lm")
+
+#RMSE = 0.429558
+#MSE = 0.1845201 // 0.429558 * 0.429558
+
+summary(model)
+```
+
+
+```{r}
+#2.6. Calculate the test error of the best model in #2.4 based on AIC using 10-fold Cross-Validation. Use train and trainControl from the caret library. Refer to model selected in #2.4 based on AIC. Report the MSE.
+
+# define training control by specifying CV - 10
+train_control_2 <- trainControl(method="CV", number=10)
+
+# train the model
+model_2 <- train(charges ~ age + sex + bmi + children + smoker + region, data=data.train, trControl=train_control_2, method="lm")
+
+# RMSE = 0.4249078
+# MSE = 0.1805466  //  0.4249078 * 0.4249078
+
+summary(model_2)
+```
+
+
+
+```{r}
+#2.7. Calculate and report the test MSE using the best model from 2.4 and test data set created in step 1.5.
+prediction <- predict(data.aic, data.test)
+
+#MSE
+sum((data.test$charges - predict(data.aic,data.frame(data.test)))^2)
+
+
+```
+
+
+
+3.Build a regression tree model.
+
+```{r}
+#3.1 Build a regression tree model using function tree(), where charges is the response and the predictors are age, sex, bmi, children, smoker, and region.
+
+library(rpart)
+library(party)
+# grow tree
+
+tree <- ctree(charges ~ age + sex + bmi + children + smoker + region, data=data.train)
+
+tree #we can see 21 nodes. 
+
+plot(tree) #visualisation of the tree
+
+```
+
+
+```{r}
+#3.2. Find the optimal tree by using cross-validation and display the results in a graphic. Report the best size.
+install.packages("tree")
+library (MASS)
+library(tree)
+
+tree.regresional = tree(charges ~ age + sex + bmi + children + smoker + region,data = data.train)
+
+summary(tree.regresional)
+plot(tree.regresional)
+
+
+tree.regresional
+
+cv.tree(tree.regresional, K=10)
+
+```
+
+
+
+7.Build a neural networks model.
+```{r}
+data.train
+
+library(neuralnet)
+
+
+network <- neuralnet(charges ~ age + sex + bmi + children + smoker + region, data=data.train, hidden = 1)
+
+```
+
+
+
+
