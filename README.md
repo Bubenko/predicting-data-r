@@ -1,4 +1,4 @@
-# Predicting Data using R
+# Predicting Data using R (Machine Learning)
 
 <img src="https://s6.gifyu.com/images/r-Final.gif" />
 
